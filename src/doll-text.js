@@ -1,3 +1,7 @@
+var DEBUG=false;
+
+var DRAW_SHIMS=false;
+
 /*
  *
  * Piece-related algorithms and functions.
@@ -58,6 +62,146 @@ var primes = [53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
     large prime but any odd number should work given the nature of 2's
     complement arithmetic. */
 var shuffle = 57885161;
+
+/** Fonts. Content will be loaded by loadFonts() at startup. */
+var fonts = {};
+
+/** Number -> string mapping. Ensure that the array size matches the maximum x value (15). */
+var numbers = [
+	"ZERO", /* For simplicity */
+	"ONE", "TWO", "THREE", "FOUR", "FIVE",
+	"SIX", "SEVEN", "EIGHT", "NINE", "TEN",
+	"ELEVEN", "TWELVE", "THIRTEEN", "FOURTEEN", "FIFTEEN",
+];
+
+/** Number string paths for each font. */
+var numberPaths = {};
+
+/**
+ *  Load given fonts into global *fonts* array, and compute metrics into *numberMetrics*.
+ *  
+ *  @param fontList		Font name => url map.
+ */
+function loadFonts(fontList) {
+	$.each(fontList, function(i, url) {
+		new FontFile(url, function(font) {
+			console.log("Font loaded", url); 
+			var name = font.opentype.familyName;
+			
+			// Sometimes the descender is positive whereas it should be below the baseline at y=0, fix it.
+			if (font.opentype.descender > 0) font.opentype.descender = -font.opentype.descender;
+			
+			fonts[name] = font;
+			computeNumberMetrics(name, font);
+			
+			// Add to select.
+			$("#font").append(new Option(name));
+		});
+	});
+}
+
+/**
+ *  Compute metrics for all number strings.
+ *  
+ *  @param name		Font name.
+ *  @param font		FontFile object.
+ */
+function computeNumberMetrics(name, font) {
+	numberPaths[name] = [];
+	for (var iNumber = 0; iNumber < numbers.length; iNumber++) {
+		var glyphs = font.opentype.stringToGlyphs(numbers[iNumber]);
+		
+		// - Compute raw coords for each glyph.
+		var paths = [];
+		var maxWidth = 0;
+		var lineHeight = font.opentype.ascender-font.opentype.descender;
+		var baseline = 0;
+		for (var iGlyph = 0; iGlyph < glyphs.length; iGlyph++) {
+			var glyph = glyphs[iGlyph];
+			
+			baseline -= lineHeight; /* Top-down. */
+			var commands = [];
+			for (var iCommand = 0; iCommand < glyph.path.commands.length; iCommand++) {
+				var command = glyph.path.commands[iCommand];
+				var coords = [];
+				switch (command.type) {
+					case 'M': coords = [{x: command.x,  y: (command.y  + baseline)}]; break;
+					case 'L': coords = [{x: command.x,  y: (command.y  + baseline)}]; break;
+					case 'C': coords = [{x: command.x1, y: (command.y1 + baseline)}, {x: command.x2, y: (command.y2 + baseline)}, {x: command.x, y: (command.y + baseline)}]; break;
+					case 'Q': coords = [{x: command.x1, y: (command.y1 + baseline)}, {x: command.x,  y: (command.y  + baseline)}]; break;
+				}
+				commands[iCommand] = {type: command.type, coords: coords};
+			}
+
+			// - Compute real glyph bounding box, overriding values from opentype.js.
+			var xMin = Number.POSITIVE_INFINITY, xMax = Number.NEGATIVE_INFINITY,
+				yMin = Number.POSITIVE_INFINITY, yMax = Number.NEGATIVE_INFINITY;
+			for (var iCommand = 0; iCommand < commands.length; iCommand++) {
+				var command = commands[iCommand];
+				for (var iCoord = 0; iCoord < command.coords.length; iCoord++) {
+					var p = command.coords[iCoord];
+					xMin = Math.min(xMin, p.x);
+					xMax = Math.max(xMax, p.x);
+					yMin = Math.min(yMin, p.y);
+					yMax = Math.max(yMax, p.y);
+				}
+			}
+			glyph.xMin = xMin;
+			glyph.xMax = xMax;
+			glyph.yMin = yMin;
+			glyph.yMax = yMax;
+			
+			var width = glyph.xMax-glyph.xMin;
+			maxWidth = Math.max(maxWidth, width);
+			
+			paths[iGlyph] = commands;
+		}
+		
+		// - Center each glyph horizontally and compute bounding box.
+		var xMin = Number.POSITIVE_INFINITY, xMax = Number.NEGATIVE_INFINITY,
+			yMin = Number.POSITIVE_INFINITY, yMax = Number.NEGATIVE_INFINITY;
+		for (var iGlyph = 0; iGlyph < glyphs.length; iGlyph++) {
+			var glyph = glyphs[iGlyph];
+			var width = glyph.xMax-glyph.xMin;
+			
+			var commands = paths[iGlyph];
+			for (var iCommand = 0; iCommand < commands.length; iCommand++) {
+				var command = commands[iCommand];
+				for (var iCoord = 0; iCoord < command.coords.length; iCoord++) {
+					var p = command.coords[iCoord];
+					
+					// - Center each glyph.
+					p.x += (maxWidth-width)/2 - glyph.xMin;
+					
+					// - Compute bounding box.
+					xMin = Math.min(xMin, p.x);
+					xMax = Math.max(xMax, p.x);
+					yMin = Math.min(yMin, p.y);
+					yMax = Math.max(yMax, p.y);
+				}
+			}
+		}
+		
+		// - Normalize coords in (0,0)-(1,1) box.
+		for (var iGlyph = 0; iGlyph < glyphs.length; iGlyph++) {
+			var glyph = glyphs[iGlyph];
+			var width = glyph.xMax-glyph.xMin;
+			
+			var path = paths[iGlyph];
+			for (var iCommand = 0; iCommand < path.length; iCommand++) {
+				var command = path[iCommand];
+				for (var iCoord = 0; iCoord < command.coords.length; iCoord++) {
+					var p = command.coords[iCoord];
+					
+					p.x = (p.x - xMin) / (xMax - xMin);
+					p.y = (p.y - yMin) / (yMax - yMin);
+				}
+			}
+		}
+		
+		numberPaths[name][iNumber] = paths;
+	}
+}
 
 /**
  * Generate increment value for linear congruential generator.
@@ -181,26 +325,13 @@ function rotate(c, p, angle) {
 }
 
 /**
- * Project line passing throught *c* and *p* on horizontal line at *y*.
- *
- *  @param c, p     Points on line to project.
- *  @param y        Y-coordinate of line to project onto.
- *
- *  @return Projected point.
- */
-function project(c, p, y) {
-    return {
-        x: c.x + (p.x-c.x) / (p.y-c.y) * (y-c.y),
-        y: y
-    };
-}
-
-/**
- * Interpolate between *p1* and *p2* at relative position *d*.
+ * 	Interpolate between *p1* and *p2* at relative position *d*.
  *
  *  @param p1   First point (d=0).
  *  @param p2   Second point (d=1).
  *  @param d    Position.
+ *  
+ *  @return interpolated point.
  */
 function interpolate(p1, p2, d) {
     return {
@@ -210,10 +341,30 @@ function interpolate(p1, p2, d) {
 }
 
 /**
+ *  Map point *p* in unit coordinates into trapeze defined by points *p1*-*p2*-*p3*-*p4*.
+ *  
+ *  @param p1	Top-left (0,0).
+ *  @param p2	Bottom-left (0,1).
+ *  @param p3	Bottom-right (1,1).
+ *  @param p4	Top-right (1,0).
+ *  @param p	Source point.
+ *  
+ *  @return interpolated point.
+ */
+function trapezeMap(p1, p2, p3, p4, p) {
+	// First compute linear interpolations of p.x along (p1,p4) and (p2,p3).
+	var p14 = interpolate(p1, p4, p.x),
+		p23 = interpolate(p2, p3, p.x);
+		
+	// Then compute linear interpolation of p.y along (p14,p23).
+	return interpolate(p14, p23, p.y);
+}
+
+/**
  * Compute a piece from its serial number.
  *
  *  @param sn           The piece serial number.
- *  @param options      Piece options: trapezoidal.
+ *  @param options      Piece options: trapezoidal, font.
  *
  *  @return The piece object.
  */
@@ -423,7 +574,42 @@ function computePiece(sn, options) {
     x2 -= x; x = 0;
     y2 -= y; y = 0;
     
-    
+	//
+	// 5. Fit text into slots.
+	//
+	
+    for (var iSlot = 0; iSlot < slots.length; iSlot++) {
+        var slot = slots[iSlot];
+		
+		// Output trapeze coordinates (or triangle when both ends are the same).
+		var firstShim = slot.shims[0], lastShim = slot.shims[slot.shims.length-1];
+		var p1 = firstShim[0],
+			p2 = firstShim[1],
+			p3 = lastShim[2],
+			p4 = lastShim[options.trapezoidal ? 3 : 0];
+		
+		// Iterate over number string's glyph paths.
+		var glyphs = numberPaths[options.font][slot.shims.length];
+		slot.glyphs = [];
+		for (var iGlyph = 0; iGlyph < glyphs.length; iGlyph++) {
+			var glyph = glyphs[iGlyph];
+			var segments = [];
+			
+			// Iterate over path commands.
+			for (var iCommand = 0; iCommand < glyph.length; iCommand++) {
+				var command = glyph[iCommand];
+				
+				// Map segment coordinates to output trapeze.
+				var segment = {type: command.type, coords: []};
+				for (var iCoord = 0; iCoord < command.coords.length; iCoord++) {
+					segment.coords[iCoord] = trapezeMap(p1, p2, p3, p4, command.coords[iCoord]);
+				}
+				segments[iCommand] = segment;
+			}
+			slot.glyphs[iGlyph] = segments;
+		}
+	}
+        
     //
     // Done!
     //
@@ -445,14 +631,32 @@ function drawSVG(piece, element) {
     svg.attr(svgAttr);
     for (var iSlot = 0; iSlot < piece.slots.length; iSlot++) {
         var slot = piece.slots[iSlot];
-        for (var iShim = 0; iShim < slot.shims.length; iShim++) {
-            var shim = slot.shims[iShim];
-            var coords = Array();
-            for (var i = 0; i < shim.length; i++) {
-                coords.push(shim[i].x, shim[i].y);
-            }
-            svg.polygon(coords);
-        }
+		
+		if (DRAW_SHIMS) {
+			for (var iShim = 0; iShim < slot.shims.length; iShim++) {
+				var shim = slot.shims[iShim];
+				var coords = Array();
+				for (var i = 0; i < shim.length; i++) {
+					coords.push(shim[i].x, shim[i].y);
+				}
+				svg.polygon(coords);
+			}
+		}
+		
+		// Build SVG path for each glyph.
+		for (var iGlyph = 0; iGlyph < slot.glyphs.length; iGlyph++) {
+			var glyph = slot.glyphs[iGlyph];
+			var path = "";
+			for (var iSegment = 0; iSegment < glyph.length; iSegment++) {
+				var segment = glyph[iSegment];
+				path += segment.type;
+				for (var iCoord = 0; iCoord < segment.coords.length; iCoord++) {
+					var c = segment.coords[iCoord];
+					path += " " + c.x + " " + c.y;
+				}
+			}
+			svg.path(path).attr({fill: 'black', stroke: 'none'});
+		}
     }
     svg.rect(
         piece.bbox.x, piece.bbox.y,
@@ -476,24 +680,33 @@ function drawPDF(piece, pdf, scale, offX, offY) {
     
     for (var iSlot = 0; iSlot < piece.slots.length; iSlot++) {
         var slot = piece.slots[iSlot];
-        for (var iShim = 0; iShim < slot.shims.length; iShim++) {
-            var shim = slot.shims[iShim];
-            var lines = Array();
-            for (var i = 0; i < shim.length; i++) {
-                lines.push([
-                    shim[(i+1)%shim.length].x-shim[i].x,
-                    shim[(i+1)%shim.length].y-shim[i].y
-                ]);
-            }
-            pdf.lines(
-                lines,
-                shim[0].x*scale+offX, shim[0].y*scale+offY,
-                [scale, scale],
-                'D'
-            );
-            
-        }
+		
+		if (DRAW_SHIMS) {
+			for (var iShim = 0; iShim < slot.shims.length; iShim++) {
+				var shim = slot.shims[iShim];
+				var lines = Array();
+				for (var i = 0; i < shim.length; i++) {
+					lines.push([
+						shim[(i+1)%shim.length].x-shim[i].x,
+						shim[(i+1)%shim.length].y-shim[i].y
+					]);
+				}
+				pdf.lines(
+					lines,
+					shim[0].x*scale+offX, shim[0].y*scale+offY,
+					[scale, scale],
+					'D'
+				);
+				
+			}
+		}
+
+		// Build PDF path for each glyph.
+		for (var iGlyph = 0; iGlyph < slot.glyphs.length; iGlyph++) {
+			pdf.path(slot.glyphs[iGlyph], offX, offY, [scale, scale], 'F');
+		}
     }
+	
     if (pdfDrawBBox) {
         pdf.rect(
             piece.bbox.x*scale+offX, piece.bbox.y*scale+offY, 
@@ -504,10 +717,52 @@ function drawPDF(piece, pdf, scale, offX, offY) {
 }
 
 /**
+ *  Extends jsPDF with path function.
+ *  
+ *  @param segments		Path segments.
+ *  @param x, y			Offset from origin.
+ *  @param scale		[x, y] scaling factor.
+ * 	@param style		jsPDF style argument.
+ *
+ *  @return this
+ */
+jsPDF.API.path = function(segments, x, y, scale, style) {
+	style = this.internal.getStyle(style);
+	scale = typeof(scale) === 'undefined' ? [1, 1] : scale;
+	
+	var scalex = scale[0];
+	var scaley = scale[1];
+	
+	var out = this.internal.write;
+	var f3 = function (number) {
+		return number.toFixed(3);
+	};
+	var k = this.internal.scaleFactor;
+	var pageHeight = this.internal.pageSize.height;
+	
+	for (var iSegment = 0; iSegment < segments.length; iSegment++) {
+		var segment = segments[iSegment];
+		for (var iCoord = 0; iCoord < segment.coords.length; iCoord++) {
+			var c = segment.coords[iCoord];
+			out(f3((c.x * scalex + x) * k) + ' ' + f3((pageHeight - (c.y * scaley + y)) * k) + ' ');
+		}
+		switch (segment.type) {
+			case 'M': out('m'); break;
+			case 'L': out('l'); break;
+			case 'C': out('c'); break;
+			case 'Q': out('v'); break;
+			case 'Z': out('h'); break;
+		}
+	}
+	out(style);
+	return this;
+}
+
+/**
  * Generate a multi-page PDF from a set of pieces.
  *
  *
- *  @param pieceOptions     Piece options: trapezoidal.
+ *  @param pieceOptions     Piece options: trapezoidal, font.
  *  @param printOptions     Print options:
  *                          - orient    Orientation ('portrait', 'landscape').
  *                          - format    Page format ('a3', 'a4','a5' ,'letter' ,'legal').
@@ -587,17 +842,18 @@ function piecesToPDF(pieceOptions, printOptions, limits, onprogress, onfinish) {
     var compo = x+"-"+(symmetric?"S":"A")+"-"+seed;
     var compoWidth = pdf.getStringUnitWidth(compo) * fontSizeUnit;
     var headerFooter = function() {
-        // DEBUG
-        // pdf.rect(
-            // printOptions.margins.left, printOptions.margins.top,
-            // outerWidth, outerHeight,
-            // 'D'
-        // );
-        // pdf.rect(
-            // printOptions.margins.left, printOptions.margins.top + (header ? fontSizeUnit + printOptions.padding : 0),
-            // innerWidth, innerHeight,
-            // 'D'
-        // );
+        if (DEBUG) {
+			pdf.rect(
+				printOptions.margins.left, printOptions.margins.top,
+				outerWidth, outerHeight,
+				'D'
+			);
+			pdf.rect(
+				printOptions.margins.left, printOptions.margins.top + (header ? fontSizeUnit + printOptions.padding : 0),
+				innerWidth, innerHeight,
+				'D'
+			);
+		}
         
         var compoX, compoY, compoJustif;
         var pageNbX, pageNbY, pageNbJustif;
@@ -709,8 +965,8 @@ function piecesToPDF(pieceOptions, printOptions, limits, onprogress, onfinish) {
                 // Invert justification on even pages in double-sided mode.
                 if (printOptions.sides == 'double') {
                     switch (printOptions.justif) {
-                        case 'left': printOptions.justif = 'right'; break; 
-                        case 'right': printOptions.justif = 'left'; break; 
+                        case 'left':  printOptions.justif = 'right'; break; 
+                        case 'right': printOptions.justif = 'left';  break; 
                     }
                 }
                 headerFooter();
@@ -731,23 +987,13 @@ function piecesToPDF(pieceOptions, printOptions, limits, onprogress, onfinish) {
         var labelX = offX;
         var shiftRight = innerWidth - (pieceWidth * printOptions.cols) - (printOptions.padding * (printOptions.cols - 1));
 
-        // DEBUG
-        // switch (printOptions.justif) {
-            // case 'left':   pdf.rect(offX, offY, pieceWidth, pieceHeight, 'D'); break;
-            // case 'center': pdf.rect(offX+shiftRight/2, offY, pieceWidth, pieceHeight, 'D'); break;
-            // case 'right':  pdf.rect(offX+shiftRight, offY, pieceWidth, pieceHeight, 'D'); break;
-        // }
-        // switch (printOptions.justif) {
-            // case 'center':
-                // offX += (pieceWidth - (piece.bbox.x2-piece.bbox.x)*scale + shiftRight)/2;
-                // labelX += (pieceWidth - labelWidth + shiftRight)/2;
-                // break;
-                
-            // case 'right':
-                // offX += (pieceWidth - (piece.bbox.x2-piece.bbox.x)*scale + shiftRight);
-                // labelX += (pieceWidth - labelWidth + shiftRight);
-                // break;
-        // }
+        if (DEBUG) {
+			switch (printOptions.justif) {
+				case 'left':   pdf.rect(offX, offY, pieceWidth, pieceHeight, 'D'); break;
+				case 'center': pdf.rect(offX+shiftRight/2, offY, pieceWidth, pieceHeight, 'D'); break;
+				case 'right':  pdf.rect(offX+shiftRight, offY, pieceWidth, pieceHeight, 'D'); break;
+			}
+		}
         
         switch (printOptions.labelPos) {
             case 'top':
@@ -1184,7 +1430,8 @@ function updatePiece(element) {
     
     // Generate piece.
     var piece = computePiece(sn, {
-        trapezoidal:$("#trapezoidal").prop('checked')
+        trapezoidal: $("#trapezoidal").prop('checked'),
+		font: 		 $("#font").val(),		
     });
     
     // Output to SVG.
@@ -1259,7 +1506,8 @@ function updateSelected() {
 function downloadSVG(sn) {
     // Generate piece.
     var piece = computePiece(sn, {
-        trapezoidal:$("#trapezoidal").prop('checked')
+        trapezoidal: $("#trapezoidal").prop('checked'),
+		font: 		 $("#font").val(),		
     });
     
     // Output to SVG.
@@ -1304,7 +1552,8 @@ function downloadPDF() {
     $("#progressDialog").modal('show');
     piecesToPDF(
         {
-            trapezoidal: $("#trapezoidal").prop('checked')
+            trapezoidal: $("#trapezoidal").prop('checked'),
+			font:		 $("#font").val(),
         },
         {
             orient: $("[name='orient']:checked").val(), 

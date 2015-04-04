@@ -7,12 +7,15 @@
     <title>The Doll Project - Text Version</title>
 
     <!-- jQuery -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
     
     <!-- Bootstrap -->
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
     <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    
+    <!-- OpenType.js -->
+    <script src="opentype.min.js"></script>
     
     <!-- Snap.svg -->
     <script src="snap.svg-min.js"></script>
@@ -27,6 +30,8 @@
     <script src="jszip.min.js"></script>
 
     <!-- Our stuff -->
+    <script src="FontFile.js"></script>
+    <script src="fonts.js"></script>
     <script src="doll-text.js"></script>
     
     <link rel="stylesheet" href="doll.css">
@@ -130,8 +135,12 @@
                 <button type="button" class="btn btn-default" onclick="checkVisible(false)"><span class="glyphicon glyphicon-remove-sign"></span> Clear visible</button>
                 <button type="button" class="btn btn-default" onclick="checkAll(true)"><span class="glyphicon glyphicon-ok-circle"></span> Check all</button>
                 <button type="button" class="btn btn-default" onclick="checkAll(false)"><span class="glyphicon glyphicon-remove-circle"></span> Clear all</button>
-                <input type="checkbox" id="trapezoidal" class="hidden"  onchange="updatePieces()"/>
+                <input type="checkbox" id="trapezoidal" class="hidden" onchange="updatePieces()"/>
                 <label for="trapezoidal" id="trapezoidal-label" class="btn btn-default" data-toggle="button" data-trapezoidal-text="4-sided">3-sided</label>
+				<div class="input-group input-group-sm">
+					<span></span>
+					<select id="font" class="form-control" onchange="updatePieces()"/></select>
+				</div>								
             </div>
             <script>
             $("#trapezoidal-label").click(function() {
