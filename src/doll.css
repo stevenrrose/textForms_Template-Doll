@@ -1,0 +1,51 @@
+.piece .thumbnail {
+    text-align: center;
+}
+.piece .piece-select {
+    position: absolute;
+    margin: 10px;
+}
+.piece .piece-select + label {
+    width: 100%;
+    background-color: #e0e0e0;
+    _background-image: linear-gradient(to bottom,#e0e0e0 0,#b0b0b0 100%);
+    opacity: 0.5;
+}
+.piece .piece-select:checked + label {
+    background-color: #fff;
+    _background-image: inherit;
+    opacity: 1.0;
+}
+.piece  svg {
+    height: 256px;
+    margin-top: 10px;
+}
+#pdf {
+    width: 100%;
+    height: 100%;
+    border: 1px solid black;
+}
+#trapezoidal-label {
+    font-style: italic;
+}
+#pager .pagination {
+    margin: 0;
+}
+#toolbar .btn-group {
+    margin-bottom: 10px;
+}
+#counter {
+    font-size: smaller;
+    font-style:italic;
+}
+legend {
+    font-size: larger;
+    font-weight: bold;
+}
+
+/* Disable animation of progress bar as it disrupts the update during 
+ * background processing. */
+.progress-bar {
+    -webkit-transition: none;
+    transition: none;
+}

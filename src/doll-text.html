@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>The Doll Project - Text Version</title>
+
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    
+    <!-- Snap.svg -->
+    <script src="snap.svg-min.js"></script>
+
+    <!-- FileSaver/saveAs ; jsPDF version is buggy on Mozilla -->
+    <script src="FileSaver.js"></script>
+
+    <!-- jsPDF -->
+    <script src="jspdf.min.js"></script>
+
+    <!-- JSZip -->
+    <script src="jszip.min.js"></script>
+
+    <!-- Our stuff -->
+    <script src="doll-text.js"></script>
+    
+    <link rel="stylesheet" href="doll.css">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>The Doll Project - Text Version</h1>
+        </div>
+        
+        <!-- Parameters -->
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <form role="form">
+                    <!-- X-Y handles -->
+                    <div class="form-group col-sm-6 col-md-3">
+                        <label for="x" class="control-label">X</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="x" value="7" min="1" max="15" />
+                            <label class="input-group-addon"><input type="checkbox" id="symmetric" /> Symmetric</label>
+                        </div>
+                        <p class="help-block">Shims per shim-unit</p>
+                    </div>
+                    <script>
+                    $("#x, #symmetric").change(validatePermutationSize).keyup(validatePermutationSize);
+                    </script>
+                        
+                    <!-- Number of pieces to generate -->
+                    <div class="form-group col-sm-6 col-md-3">
+                        <label for="nbPieces" class="control-label">Pieces</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="nbPieces" value="1" min="1" max="1000" />
+                            <label class="input-group-addon"><input type="checkbox" id="max" /> Max</label>
+                        </div>
+                        <p class="help-block">Nb pieces to generate</p>
+                        <script>
+                        $("#max").change(function() {
+                            $("#nbPieces").prop('disabled', this.checked);
+                        });
+                        </script>
+                    </div>
+                    
+                    <!-- Seed for pseudo-random permutation -->
+                    <div class="form-group col-sm-6 col-md-3">
+                        <label for="seed" class="control-label">Seed</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="seed" value="0" min="0" max="999999" disabled />
+                            <label class="input-group-addon"><input type="checkbox" id="random" checked /> Random</label>
+                        </div>
+                        <p class="help-block">Seed for piece generator</p>
+                        <script>
+                        $("#random").change(function() {
+                            $("#seed").prop('disabled', this.checked);
+                        });
+                        </script>
+                    </div>
+                    
+                    <!-- Layout -->
+                    <div class="form-group col-sm-6 col-md-3">
+                        <label class="control-label">Display</label>
+                        <div class="form-inline">
+                            <select id="columns" class="form-control">
+                                <option value="0" selected>Auto</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="6">6</option>
+                            </select>
+                            &times;
+                            <select id="rows" class="form-control">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3" selected>3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                            </select>
+                        </div>
+                        <p class="help-block">Columns/rows per page</p>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Container for validation/error messages -->
+            <div id="message"></div>
+            
+            <!-- Generate/print buttons -->
+            <div class="panel-footer">
+                <button type="button" id="generate" class="btn btn-primary" onclick="generatePieces()"><span class="glyphicon glyphicon-refresh"></span> Generate</button>
+                <button type="button" id="zip" class="btn btn-default" data-toggle="modal" data-target="#zipDialog" disabled autocomplete="off"><span class="glyphicon glyphicon-compressed"></span> Zip...</button>
+                <button type="button" id="print" class="btn btn-default" data-toggle="modal" data-target="#printDialog" disabled autocomplete="off"><span class="glyphicon glyphicon-print"></span> Print...</button>
+            </div>
+        </div>        
+    </div>
+
+    <!-- Toolbar with check/uncheck buttons and pager -->
+    <div id="toolbar" class="container hidden">
+        <div class="btn-toolbar">
+            <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-default" onclick="checkVisible(true)"><span class="glyphicon glyphicon-ok-sign"></span> Check visible</button>
+                <button type="button" class="btn btn-default" onclick="checkVisible(false)"><span class="glyphicon glyphicon-remove-sign"></span> Clear visible</button>
+                <button type="button" class="btn btn-default" onclick="checkAll(true)"><span class="glyphicon glyphicon-ok-circle"></span> Check all</button>
+                <button type="button" class="btn btn-default" onclick="checkAll(false)"><span class="glyphicon glyphicon-remove-circle"></span> Clear all</button>
+                <input type="checkbox" id="trapezoidal" class="hidden"  onchange="updatePieces()"/>
+                <label for="trapezoidal" id="trapezoidal-label" class="btn btn-default" data-toggle="button" data-trapezoidal-text="4-sided">3-sided</label>
+            </div>
+            <script>
+            $("#trapezoidal-label").click(function() {
+                $("#trapezoidal").click();
+            });
+            $("#trapezoidal").change(function() {
+                $("#trapezoidal-label").button(this.checked?"trapezoidal":'reset');
+            });
+            </script>
+            <div id="pager" class="btn-group"></div>
+        </div>
+        <p id="counter"><span id="selectedPieces"></span> selected / <span id="totalPieces"></span> total</p>
+    </div>
+    
+    <!-- Container for pieces -->
+    <div class="container-fluid" id="pieces"></div>
+
+    <!-- SVG Zip output settings dialog -->
+    <div class="modal fade" id="zipDialog" tabindex="-1" role="dialog" aria-labelledby="zipLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <!-- Title -->
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title" id="zipLabel">Zipped SVG Output</h4>
+                </div>
+                
+                <!-- Output settings -->
+                <div class="modal-body">
+                    <form role="form">
+                        <!-- Limits -->
+                        <div class="form-group row">
+                            <label class="col-sm-2 control-label">Limits</label>
+                            <div class="col-sm-5">
+                                <input type="number" class="form-control" id="maxZip" value="100000" min="1" max="1000000" />
+                                <p class="help-block">Maximum overall number of pieces to export</p>
+                            </div>
+                            <div class="col-sm-5">
+                                <input type="number" class="form-control" id="maxPiecesPerZip" value="1000" min="1" max="100000" />
+                                <p class="help-block">Maximum number of pieces per Zip file</p>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Buttons -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="downloadZip()"><span class="glyphicon glyphicon-download"></span> Download Zip</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print/PDF output settings dialog -->
+    <div class="modal fade" id="printDialog" tabindex="-1" role="dialog" aria-labelledby="printLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <!-- Title -->
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title" id="printLabel">PDF Output</h4>
+                </div>
+                
+                <!-- Print settings -->
+                <div class="modal-body">
+                    <form role="form">
+                        <fieldset>
+                            <legend>Format</legend>
+                            
+                            <!-- Page orientation -->
+                            <div class="col-sm-6 col-md-4">                                
+                                <ul class="list-inline">
+                                    <li>
+                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                            <label class="btn btn-default active">
+                                                <input type="radio" name="orient" value="portrait" checked />Portrait
+                                            </label>
+                                            <label class="btn btn-default">
+                                                <input type="radio" name="orient" value="landscape" />Landscape
+                                            </label>
+                                        </div>
+                                    </li>
+                                </ul>
+                                <p class="help-block">Page orientation</p>
+                            </div>
+                            
+                            <!-- Page format -->
+                            <div class="col-sm-6 col-md-4">                                
+                                <ul class="list-inline">
+                                    <li>
+                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                            <label class="btn btn-default ">
+                                                <input type="radio" name="format" value="a3" />A3
+                                            </label>
+                                            <label class="btn btn-default active">
+                                                <input type="radio" name="format" value="a4" checked />A4
+                                            </label>
+                                            <label class="btn btn-default">
+                                                <input type="radio" name="format" value="a5" />A5
+                                            </label>
+                                            <label class="btn btn-default">
+                                                <input type="radio" name="format" value="letter" />Letter
+                                            </label>
+                                            <label class="btn btn-default">
+                                                <input type="radio" name="format" value="legal" />Legal
+                                            </label>
+                                        </div>
+                                    </li>
+                                </ul>
+                                <p class="help-block">Page size</p>
+                            </div>
+                            
+                            <!-- Single/double sided -->
+                            <div class="col-sm-6 col-md-4">                                
+                                <ul class="list-inline">
+                                    <li>
+                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                            <label class="btn btn-default active">
+                                                <input type="radio" name="sides" value="single" checked />Single-sided
+                                            </label>
+                                            <label class="btn btn-default">
+                                                <input type="radio" name="sides" value="double" />Double-sided
+                                            </label>
+                                        </div>
+                                    </li>
+                                </ul>
+                                <p class="help-block">Print mode</p>
+                            </div>
+                        </fieldset>
+                            
+                            
+                        <fieldset id="margins">
+                            <legend>Margins</legend>
+                            
+                            <!-- Page margins -->
+                            <div class="col-sm-4 col-md-2">                                
+                                <input type="number" class="form-control" id="marginTop" value="10" min="0" step="0.1" />
+                                <p class="help-block">Top</p>
+                            </div>
+                            <div class="col-sm-4 col-md-2">                                
+                                <input type="number" class="form-control" id="marginBottom" value="10" min="0" step="0.1" />  
+                                <p class="help-block">Bottom</p>
+                            </div>
+                            <div class="col-sm-4 col-md-2">                                
+                                <input type="number" class="form-control" id="marginLeft" value="10" min="0" step="0.1" />
+                                <p class="help-block">Left / Inner</p>
+                            </div>
+                            <div class="col-sm-4 col-md-2">                                
+                                <input type="number" class="form-control" id="marginRight" value="10" min="0" step="0.1" />
+                                <p class="help-block">Right / Outer</p>
+                            </div>
+                            
+                            <!-- Padding between pages -->
+                            <div class="col-sm-4 col-md-2">                                
+                                <input type="number" class="form-control" id="padding" value="5" min="0" step="0.1" />
+                                <p class="help-block">Padding</p>
+                            </div>
+                            
+                            <!-- Units -->
+                            <div class="col-sm-4 col-md-2">                                
+                                <select id="unit" class="form-control">
+                                    <option value="mm" selected>mm</option>
+                                    <option value="cm">cm</option>
+                                    <option value="in">in</option>
+                                    <option value="pt">pt</option>
+                                </select>
+                                <p class="help-block">Units</p>
+                            </div>
+                            <script>
+                            var currentUnit = 'mm';
+                            var step = {mm: 0.1, cm: 0.01, in: 0.01, pt: 1};        // Step for inputs.
+                            $("#unit").change(function() {
+                                // Convert dimensions & adjust steps.
+                                var oldUnit = currentUnit;
+                                currentUnit = this.value;
+                                $("#margins input[type='number']").each(function() {
+                                    $(this).val($(this).val()*unitPt[oldUnit]/unitPt[currentUnit]).attr('step', step[currentUnit]).change();
+                                });
+                            });
+                            </script>
+                        </fieldset>
+                        
+                        <fieldset>
+                            <legend>Layout</legend>
+                            
+                            <!-- Justification -->
+                            <div class="col-sm-6 col-md-4">
+                                <ul class="list-inline">
+                                    <li>
+                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                            <label class="btn btn-default active">
+                                                <input type="radio" name="justif" value="left" checked />Left / Inner
+                                            </label>
+                                            <label class="btn btn-default">
+                                                <input type="radio" name="justif" value="center" />Center
+                                            </label>
+                                            <label class="btn btn-default">
+                                                <input type="radio" name="justif" value="right" />Right / Outer
+                                            </label>
+                                        </div>
+                                        <p class="help-block">Justification</p>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Piece layout on pages -->
+                            <div class="col-sm-6">
+                                <div class="form-inline">
+                                    <select id="printColumns" class="form-control">
+                                        <option value="1" selected>1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                        <option value="5">5</option>
+                                    </select>
+                                    &times;
+                                    <select id="printRows" class="form-control">
+                                        <option value="1" selected>1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                        <option value="5">5</option>
+                                    </select>
+                                </div>
+                                <p class="help-block">Minimum number of columns/rows per page</p>
+                            </div>
+                        </fieldset>
+                        
+                        <!-- Labels -->
+                        <fieldset>
+                            <legend>Labels</legend>
+
+                            <!-- Piece label -->
+                            <div class="col-sm-6 col-md-4">                                
+                                <ul class="list-inline">
+                                    <li>
+                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                            <label class="btn btn-default active">
+                                                <input type="radio" name="compoPos" value="none" checked />None
+                                            </label>
+                                            <label class="btn btn-default">
+                                                <input type="radio" name="compoPos" value="top" />Header
+                                            </label>
+                                            <label class="btn btn-default">
+                                                <input type="radio" name="compoPos" value="bottom" />Footer
+                                            </label>
+                                        </div>
+                                        <p class="help-block">Composition number position</p>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Piece label -->
+                            <div class="col-sm-6 col-md-4">                                
+                                <ul class="list-inline">
+                                    <li>
+                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                            <label class="btn btn-default active">
+                                                <input type="radio" name="pageNbPos" value="none" checked />None
+                                            </label>
+                                            <label class="btn btn-default">
+                                                <input type="radio" name="pageNbPos" value="top" />Header
+                                            </label>
+                                            <label class="btn btn-default">
+                                                <input type="radio" name="pageNbPos" value="bottom" />Footer
+                                            </label>
+                                        </div>
+                                        <p class="help-block">Page number position</p>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Piece label -->
+                            <div class="col-sm-6 col-md-4">                                
+                                <ul class="list-inline">
+                                    <li>
+                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                            <label class="btn btn-default active">
+                                                <input type="radio" name="labelPos" value="none" checked />None
+                                            </label>
+                                            <label class="btn btn-default">
+                                                <input type="radio" name="labelPos" value="top" />Top
+                                            </label>
+                                            <label class="btn btn-default">
+                                                <input type="radio" name="labelPos" value="bottom" />Bottom
+                                            </label>
+                                        </div>
+                                        <p class="help-block">Piece S/N label position</p>
+                                    </li>
+                                </ul>
+                            </div>
+                        </fieldset>
+                        
+                        <!-- Limits -->
+                        <fieldset>
+                            <legend>Limits</legend>
+                            <div class="col-sm-4">
+                                <input type="number" class="form-control" id="maxPieces" value="100000" min="1" max="1000000" />
+                                <p class="help-block">Maximum overall number of pieces to print</p>
+                            </div>
+                            <div class="col-sm-4">
+                                <input type="number" class="form-control" id="maxPiecesPerDoc" value="10000" min="1" max="100000" />
+                                <p class="help-block">Maximum number of pieces per document</p>
+                            </div>
+                            <div class="col-sm-4">
+                                <input type="number" class="form-control" id="maxPagesPerDoc" value="500" min="1" max="10000" />
+                                <p class="help-block">Maximum number of pages per document</p>
+                            </div>
+                        </fieldset>
+                    </form>
+                </div>
+                
+                <!-- Buttons -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="downloadPDF()"><span class="glyphicon glyphicon-download"></span> Download PDFs</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress modal dialog. -->
+    <div class="modal fade" id="progressDialog" tabindex="-1" role="dialog" aria-labelledby="outputLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="outputLabel">Output In Progress...</h4>
+                </div>
+                <div class="modal-body">
+                    <!-- Progress bar -->
+                    <div id="progress" class="progress progress-striped active">
+                      <div class="progress-bar"  role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                        <span class="sr-only">0%</span>
+                      </div>
+                    </div>
+                    <!-- Progress texts -->
+                    <p id="progressPiece"></p>
+                    <p id="progressPage"></p>
+                    <p id="progressDoc"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scratch pad for SVG output -->
+    <div id="tmpSvg" class="hidden"><svg xmlns='http://www.w3.org/2000/svg' version='1.1'></svg></div>
+    
+    <script>
+        // Add validation for number inputs.
+        $("input[type='number']").change(validateNumber);
+    </script>
+</body>
+</html>
