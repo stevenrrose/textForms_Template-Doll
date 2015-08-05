@@ -4,15 +4,15 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>The Doll Project - Text Version</title>
+    <title>DOLL TEXT</title>
 
     <!-- jQuery -->
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
     
     <!-- Bootstrap -->
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
     <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="theme.css">
     
     <!-- OpenType.js -->
     <script src="opentype.min.js"></script>
@@ -37,123 +37,173 @@
     <link rel="stylesheet" href="doll.css">
 </head>
 <body>
-    <div class="container">
+    <div class="container-fluid">
         <div class="page-header">
-            <h1>The Doll Project - Text Version</h1>
+            <h1><sup>1 </sup>Doll Text</h1>
         </div>
         
         <!-- Parameters -->
         <div class="panel panel-default">
-            <div class="panel-body">
-                <form role="form">
-                    <!-- X-Y handles -->
-                    <div class="form-group col-sm-6 col-md-3">
-                        <label for="x" class="control-label">X</label>
-                        <div class="input-group">
-                            <input type="number" class="form-control" id="x" value="7" min="1" max="15" />
-                            <label class="input-group-addon"><input type="checkbox" id="symmetric" /> Symmetric</label>
-                        </div>
-                        <p class="help-block">Shims per shim-unit</p>
-                    </div>
-                    <script>
-                    $("#x, #symmetric").change(validatePermutationSize).keyup(validatePermutationSize);
-                    </script>
-                        
-                    <!-- Number of pieces to generate -->
-                    <div class="form-group col-sm-6 col-md-3">
-                        <label for="nbPieces" class="control-label">Pieces</label>
-                        <div class="input-group">
-                            <input type="number" class="form-control" id="nbPieces" value="1" min="1" max="1000" />
-                            <label class="input-group-addon"><input type="checkbox" id="max" /> Max</label>
-                        </div>
-                        <p class="help-block">Nb pieces to generate</p>
-                        <script>
-                        $("#max").change(function() {
-                            $("#nbPieces").prop('disabled', this.checked);
-                        });
-                        </script>
-                    </div>
-                    
-                    <!-- Seed for pseudo-random permutation -->
-                    <div class="form-group col-sm-6 col-md-3">
-                        <label for="seed" class="control-label">Seed</label>
-                        <div class="input-group">
-                            <input type="number" class="form-control" id="seed" value="0" min="0" max="999999" disabled />
-                            <label class="input-group-addon"><input type="checkbox" id="random" checked /> Random</label>
-                        </div>
-                        <p class="help-block">Seed for piece generator</p>
-                        <script>
-                        $("#random").change(function() {
-                            $("#seed").prop('disabled', this.checked);
-                        });
-                        </script>
-                    </div>
-                    
-                    <!-- Layout -->
-                    <div class="form-group col-sm-6 col-md-3">
-                        <label class="control-label">Display</label>
-                        <div class="form-inline">
-                            <select id="columns" class="form-control">
-                                <option value="0" selected>Auto</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="6">6</option>
-                            </select>
-                            &times;
-                            <select id="rows" class="form-control">
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3" selected>3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                            </select>
-                        </div>
-                        <p class="help-block">Columns/rows per page</p>
-                    </div>
-                </form>
-            </div>
-            
-            <!-- Container for validation/error messages -->
-            <div id="message"></div>
-            
-            <!-- Generate/print buttons -->
-            <div class="panel-footer">
-                <button type="button" id="generate" class="btn btn-primary" onclick="generatePieces()"><span class="glyphicon glyphicon-refresh"></span> Generate</button>
-                <button type="button" id="zip" class="btn btn-default" data-toggle="modal" data-target="#zipDialog" disabled autocomplete="off"><span class="glyphicon glyphicon-compressed"></span> Zip...</button>
-                <button type="button" id="print" class="btn btn-default" data-toggle="modal" data-target="#printDialog" disabled autocomplete="off"><span class="glyphicon glyphicon-print"></span> Print...</button>
-            </div>
-        </div>        
-    </div>
+			<form role="form">
+				<div class="panel-body">
+					<div class="row">
 
-    <!-- Toolbar with check/uncheck buttons and pager -->
-    <div id="toolbar" class="container hidden">
-        <div class="btn-toolbar">
-            <div class="btn-group btn-group-sm">
-                <button type="button" class="btn btn-default" onclick="checkVisible(true)"><span class="glyphicon glyphicon-ok-sign"></span> Check visible</button>
-                <button type="button" class="btn btn-default" onclick="checkVisible(false)"><span class="glyphicon glyphicon-remove-sign"></span> Clear visible</button>
-                <button type="button" class="btn btn-default" onclick="checkAll(true)"><span class="glyphicon glyphicon-ok-circle"></span> Check all</button>
-                <button type="button" class="btn btn-default" onclick="checkAll(false)"><span class="glyphicon glyphicon-remove-circle"></span> Clear all</button>
-                <input type="checkbox" id="trapezoidal" class="hidden" onchange="updatePieces()"/>
-                <label for="trapezoidal" id="trapezoidal-label" class="btn btn-default" data-toggle="button" data-trapezoidal-text="4-sided">3-sided</label>
-				<div class="input-group input-group-sm">
-					<span></span>
-					<select id="font" class="form-control" onchange="updatePieces()"/></select>
-				</div>								
-            </div>
-            <script>
-            $("#trapezoidal-label").click(function() {
-                $("#trapezoidal").click();
-            });
-            $("#trapezoidal").change(function() {
-                $("#trapezoidal-label").button(this.checked?"trapezoidal":'reset');
-            });
-            </script>
-            <div id="pager" class="btn-group"></div>
+						<!-- X-Y handles -->
+						<div class="form-group col-sm-3">
+							<label for="x" class="control-label">X</label>
+							<input type="number" class="form-control" id="x" value="7" min="1" max="15" />
+							<p class="help-block">Shims per Shim-Unit.</p>
+						</div>
+						<div class="form-group col-sm-3">
+							<label class="control-label hidden-xs">&nbsp;</label>
+							<label class="btn btn-default form-control"><input type="checkbox" id="symmetric" /><span> Symmetric</span></label>
+						</div>
+						<script>
+						$("#x, #symmetric").change(validatePermutationSize).keyup(validatePermutationSize);
+						</script>
+
+						<!-- Number of pieces to generate -->
+						<div class="form-group col-sm-3">
+							<label for="nbPieces" class="control-label">Pieces</label>
+							<div class="input-group">
+								<input type="number" class="form-control" id="nbPieces" value="1" min="1" max="1000" />
+								<input type="hidden" id="oldNbPieces" />
+								<label class="input-group-addon"><input type="checkbox" id="max" /><span> Max</span></label>
+							</div>
+							<p class="help-block">No. of Pieces to Generate.</p>
+							<script>
+							$("#max").change(validatePermutationSize);
+							</script>
+						</div>
+
+						<!-- Seed for pseudo-random permutation -->
+						<div class="form-group col-sm-3">
+							<label for="seed" class="control-label">Seed</label>
+							<div class="input-group">
+								<input type="number" class="form-control" id="seed" value="0" min="0" max="999999" disabled />
+								<label class="input-group-addon"><input type="checkbox" id="random" checked /><span> Rdm.</span></label>
+							</div>
+							<p class="help-block">Seed for Piece Generator.</p>
+							<script>
+							$("#random").change(function() {
+								$("#seed").prop('disabled', this.checked);
+							});
+							</script>
+						</div>
+
+						<!-- Container for validation/error messages -->
+						<div id="message"></div>
+					</div>
+
+					<hr/>
+					
+					<div class="row">
+						<!-- Layout -->
+						<!--
+						<div class="form-group col-sm-3" id="display1">
+							<label class="control-label">Display I</label>
+							<select id="columns" class="form-control">
+								<option value="0" selected>Auto</option>
+								<option value="1">1</option>
+								<option value="2">2</option>
+								<option value="3">3</option>
+								<option value="4">4</option>
+								<option value="6">6</option>
+							</select>
+							<p class="help-block hidden-xs">Columns / Rows per Page.</p>
+						</div>
+						<div class="form-group col-sm-3" id="display2">
+							<label class="control-label">Display II</label>
+							<select id="rows" class="form-control">
+								<option value="1">1</option>
+								<option value="2">2</option>
+								<option value="3" selected>3</option>
+								<option value="4">4</option>
+								<option value="5">5</option>
+							</select>
+							<p class="help-block visible-xs">Columns / Rows per Page.</p>
+						</div>
+						-->
+						<input type="hidden" id="columns" value="3">
+						<input type="hidden" id="rows" value="5">
+				
+						<!-- Options -->
+						<div class="form-group col-sm-3">
+							<label class="control-label">Shim Option I</label>
+							<select class="form-control" onchange="updatePieces()">
+								<option value="" selected>3-Sided</option>
+								<option id="trapezoidal" value="trapezoidal">4-Sided</option>
+							</select>
+							<p class="help-block hidden-xs">No. of Sides on Shim.</p>
+						</div>
+						<div class="form-group col-sm-3">
+							<label class="control-label">Shim Option II</label>
+							<select id="font" class="form-control" onchange="updatePieces()"/></select>
+							<p class="help-block hidden-xs">Font.</p>
+						</div>								
+
+						<!-- Generate/print buttons -->
+						<div class="form-group col-sm-3">
+							<label class="control-label hidden-xs">&nbsp;</label>
+							<button type="button" id="generate" class="btn btn-primary form-control" onclick="generatePieces()">Generate <span class="icon icon-generate"></span></button>
+						</div>
+						<div class="form-group col-sm-3 col-half">
+							<label class="control-label hidden-xs">&nbsp;</label>
+							<button type="button" id="zip" class="btn btn-default form-control" data-toggle="modal" data-target="#zipDialog" disabled autocomplete="off">Zip <span class="icon icon-arrow-down"></span></button>
+						</div>
+						<div class="form-group col-sm-3 col-half">
+							<label class="control-label hidden-xs">&nbsp;</label>
+							<button type="button" id="print" class="btn btn-default form-control" data-toggle="modal" data-target="#printDialog" disabled autocomplete="off">Print <span class="icon icon-arrow-up"></span></button>
+						</div>
+					</div>
+				</div>
+			</form>
         </div>
-        <p id="counter"><span id="selectedPieces"></span> selected / <span id="totalPieces"></span> total</p>
-    </div>
+
+		<!-- Toolbar with check/uncheck/cropping buttons and pager -->
+		<div id="toolbar" class="panel hidden">
+			<div class="row">
+				<!-- Counters -->
+				<div class="form-group col-sm-6">
+					<p id="counter" class="control-label"><span id="selectedPieces"></span> | <span id="totalPieces"></span></p>
+				</div>
+
+				<!-- Selection -->
+				<!--
+				<div class="form-group col-sm-3">
+					<button type="button" class="btn btn-default form-control" onclick="checkVisible(true)"><span class="icon icon-checkbox-group-on"></span> Check visible</button>
+				</div>
+				<div class="form-group col-sm-3">
+					<button type="button" class="btn btn-default form-control" onclick="checkVisible(false)"><span class="icon icon-checkbox-group-off"></span> Clear visible</button>
+				</div>
+				-->
+				<div class="form-group col-sm-3">
+					<button type="button" class="btn btn-default form-control" onclick="checkAll(true)"><span class="icon icon-checkbox-group-on"></span> Check all</button>
+				</div>
+				<div class="form-group col-sm-3">
+					<button type="button" class="btn btn-default form-control" onclick="checkAll(false)"><span class="icon icon-checkbox-group-off"></span> Clear all</button>
+				</div>
+			</div>
+
+			<!-- Pager -->
+			<div class="row">
+				<div id="pager" class="hidden-xs"></div>
+				<!--
+				<div id="pager-xs" class="visible-xs">
+					<div class="form-group col-xs-6">
+						<p id="page" class="control-label">PAGE <span id="currentPage"></span> / <span id="totalPages"></span></p>
+					</div>
+					<div class="form-group col-xs-3">
+						<button id="prevPage" type="button" class="btn btn-default form-control"><span class="icon icon-arrow-left"></span> Prev</button>
+					</div>
+					<div class="form-group col-xs-3">
+						<button id="nextPage" type="button" class="btn btn-default form-control">Next <span class="icon icon-arrow-right"></span></button>
+					</div>
+				</div>
+				-->
+			</div>
+		</div>
+	</div>
     
     <!-- Container for pieces -->
     <div class="container-fluid" id="pieces"></div>
@@ -167,28 +217,28 @@
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                     <h4 class="modal-title" id="zipLabel">Zipped SVG Output</h4>
                 </div>
-                
+
                 <!-- Output settings -->
                 <div class="modal-body">
                     <form role="form">
-                        <!-- Limits -->
-                        <div class="form-group row">
-                            <label class="col-sm-2 control-label">Limits</label>
-                            <div class="col-sm-5">
+						<!-- Limits -->
+                        <fieldset>
+                            <legend>Limits</legend>
+                            <div class="form-group col-sm-6">
                                 <input type="number" class="form-control" id="maxZip" value="100000" min="1" max="1000000" />
                                 <p class="help-block">Maximum overall number of pieces to export</p>
                             </div>
-                            <div class="col-sm-5">
+                            <div class="form-group col-sm-6">
                                 <input type="number" class="form-control" id="maxPiecesPerZip" value="1000" min="1" max="100000" />
                                 <p class="help-block">Maximum number of pieces per Zip file</p>
                             </div>
-                        </div>
+                        </fieldset>
                     </form>
                 </div>
-                
+
                 <!-- Buttons -->
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" onclick="downloadZip()"><span class="glyphicon glyphicon-download"></span> Download Zip</button>
+                    <button type="button" class="btn btn-primary" onclick="downloadZip()">Download Zip <span class="icon icon-arrow-down"></span></button>
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                 </div>
             </div>
@@ -204,18 +254,18 @@
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                     <h4 class="modal-title" id="printLabel">PDF Output</h4>
                 </div>
-                
+
                 <!-- Print settings -->
                 <div class="modal-body">
                     <form role="form">
                         <fieldset>
                             <legend>Format</legend>
-                            
+
                             <!-- Page orientation -->
-                            <div class="col-sm-6 col-md-4">                                
+                            <div class="form-group col-sm-6 col-md-4">
                                 <ul class="list-inline">
                                     <li>
-                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                        <div class="btn-group" data-toggle="buttons">
                                             <label class="btn btn-default active">
                                                 <input type="radio" name="orient" value="portrait" checked />Portrait
                                             </label>
@@ -227,12 +277,12 @@
                                 </ul>
                                 <p class="help-block">Page orientation</p>
                             </div>
-                            
+
                             <!-- Page format -->
-                            <div class="col-sm-6 col-md-4">                                
+                            <div class="form-group col-sm-6 col-md-4">
                                 <ul class="list-inline">
                                     <li>
-                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                        <div class="btn-group" data-toggle="buttons">
                                             <label class="btn btn-default ">
                                                 <input type="radio" name="format" value="a3" />A3
                                             </label>
@@ -253,12 +303,12 @@
                                 </ul>
                                 <p class="help-block">Page size</p>
                             </div>
-                            
+
                             <!-- Single/double sided -->
-                            <div class="col-sm-6 col-md-4">                                
+                            <div class="form-group col-sm-6 col-md-4">
                                 <ul class="list-inline">
                                     <li>
-                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                        <div class="btn-group" data-toggle="buttons">
                                             <label class="btn btn-default active">
                                                 <input type="radio" name="sides" value="single" checked />Single-sided
                                             </label>
@@ -271,37 +321,38 @@
                                 <p class="help-block">Print mode</p>
                             </div>
                         </fieldset>
-                            
-                            
+
+						<hr/>
+						
                         <fieldset id="margins">
                             <legend>Margins</legend>
-                            
+
                             <!-- Page margins -->
-                            <div class="col-sm-4 col-md-2">                                
+                            <div class="form-group col-sm-4 col-md-2">
                                 <input type="number" class="form-control" id="marginTop" value="10" min="0" step="0.1" />
                                 <p class="help-block">Top</p>
                             </div>
-                            <div class="col-sm-4 col-md-2">                                
-                                <input type="number" class="form-control" id="marginBottom" value="10" min="0" step="0.1" />  
+                            <div class="form-group col-sm-4 col-md-2">
+                                <input type="number" class="form-control" id="marginBottom" value="10" min="0" step="0.1" />
                                 <p class="help-block">Bottom</p>
                             </div>
-                            <div class="col-sm-4 col-md-2">                                
+                            <div class="form-group col-sm-4 col-md-2">
                                 <input type="number" class="form-control" id="marginLeft" value="10" min="0" step="0.1" />
                                 <p class="help-block">Left / Inner</p>
                             </div>
-                            <div class="col-sm-4 col-md-2">                                
+                            <div class="form-group col-sm-4 col-md-2">
                                 <input type="number" class="form-control" id="marginRight" value="10" min="0" step="0.1" />
                                 <p class="help-block">Right / Outer</p>
                             </div>
-                            
+
                             <!-- Padding between pages -->
-                            <div class="col-sm-4 col-md-2">                                
+                            <div class="form-group col-sm-4 col-md-2">
                                 <input type="number" class="form-control" id="padding" value="5" min="0" step="0.1" />
                                 <p class="help-block">Padding</p>
                             </div>
-                            
+
                             <!-- Units -->
-                            <div class="col-sm-4 col-md-2">                                
+                            <div class="form-group col-sm-4 col-md-2">
                                 <select id="unit" class="form-control">
                                     <option value="mm" selected>mm</option>
                                     <option value="cm">cm</option>
@@ -323,15 +374,40 @@
                             });
                             </script>
                         </fieldset>
-                        
+						
+						<hr/>
+
                         <fieldset>
                             <legend>Layout</legend>
-                            
+
+                            <!-- Piece layout on pages -->
+                            <div id="printLayout" class="form-group col-sm-4 col-md-6">
+								<div id="layout1">
+									<select id="printColumns" class="form-control">
+										<option value="1" selected>1</option>
+										<option value="2">2</option>
+										<option value="3">3</option>
+										<option value="4">4</option>
+										<option value="5">5</option>
+									</select>
+								</div>
+								<div id="layout2">
+									<select id="printRows" class="form-control">
+										<option value="1" selected>1</option>
+										<option value="2">2</option>
+										<option value="3">3</option>
+										<option value="4">4</option>
+										<option value="5">5</option>
+									</select>
+								</div>
+                                <p class="help-block">Minimum number of columns/rows per page</p>
+                            </div>
+
                             <!-- Justification -->
-                            <div class="col-sm-6 col-md-4">
+                            <div class="form-group col-sm-8 col-md-6">
                                 <ul class="list-inline">
                                     <li>
-                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                        <div class="btn-group" data-toggle="buttons">
                                             <label class="btn btn-default active">
                                                 <input type="radio" name="justif" value="left" checked />Left / Inner
                                             </label>
@@ -346,39 +422,19 @@
                                     </li>
                                 </ul>
                             </div>
-                            
-                            <!-- Piece layout on pages -->
-                            <div class="col-sm-6">
-                                <div class="form-inline">
-                                    <select id="printColumns" class="form-control">
-                                        <option value="1" selected>1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4</option>
-                                        <option value="5">5</option>
-                                    </select>
-                                    &times;
-                                    <select id="printRows" class="form-control">
-                                        <option value="1" selected>1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4</option>
-                                        <option value="5">5</option>
-                                    </select>
-                                </div>
-                                <p class="help-block">Minimum number of columns/rows per page</p>
-                            </div>
                         </fieldset>
-                        
+						
+						<hr/>
+
                         <!-- Labels -->
                         <fieldset>
                             <legend>Labels</legend>
 
                             <!-- Piece label -->
-                            <div class="col-sm-6 col-md-4">                                
+                            <div class="form-group col-sm-6 col-md-4">
                                 <ul class="list-inline">
                                     <li>
-                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                        <div class="btn-group" data-toggle="buttons">
                                             <label class="btn btn-default active">
                                                 <input type="radio" name="compoPos" value="none" checked />None
                                             </label>
@@ -395,10 +451,10 @@
                             </div>
 
                             <!-- Piece label -->
-                            <div class="col-sm-6 col-md-4">                                
+                            <div class="form-group col-sm-6 col-md-4">
                                 <ul class="list-inline">
                                     <li>
-                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                        <div class="btn-group" data-toggle="buttons">
                                             <label class="btn btn-default active">
                                                 <input type="radio" name="pageNbPos" value="none" checked />None
                                             </label>
@@ -415,10 +471,10 @@
                             </div>
 
                             <!-- Piece label -->
-                            <div class="col-sm-6 col-md-4">                                
+                            <div class="form-group col-sm-6 col-md-4">
                                 <ul class="list-inline">
                                     <li>
-                                        <div class="btn-group btn-group-sm" data-toggle="buttons">
+                                        <div class="btn-group" data-toggle="buttons">
                                             <label class="btn btn-default active">
                                                 <input type="radio" name="labelPos" value="none" checked />None
                                             </label>
@@ -434,29 +490,31 @@
                                 </ul>
                             </div>
                         </fieldset>
-                        
+						
+						<hr/>
+
                         <!-- Limits -->
                         <fieldset>
                             <legend>Limits</legend>
-                            <div class="col-sm-4">
+                            <div class="form-group col-sm-4">
                                 <input type="number" class="form-control" id="maxPieces" value="100000" min="1" max="1000000" />
                                 <p class="help-block">Maximum overall number of pieces to print</p>
                             </div>
-                            <div class="col-sm-4">
+                            <div class="form-group col-sm-4">
                                 <input type="number" class="form-control" id="maxPiecesPerDoc" value="10000" min="1" max="100000" />
                                 <p class="help-block">Maximum number of pieces per document</p>
                             </div>
-                            <div class="col-sm-4">
+                            <div class="form-group col-sm-4">
                                 <input type="number" class="form-control" id="maxPagesPerDoc" value="500" min="1" max="10000" />
                                 <p class="help-block">Maximum number of pages per document</p>
                             </div>
                         </fieldset>
                     </form>
                 </div>
-                
+
                 <!-- Buttons -->
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" onclick="downloadPDF()"><span class="glyphicon glyphicon-download"></span> Download PDFs</button>
+                    <button type="button" class="btn btn-primary" onclick="downloadPDF()">Download PDFs <span class="icon icon-arrow-down"></span></button>
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                 </div>
             </div>
@@ -471,27 +529,24 @@
                     <h4 class="modal-title" id="outputLabel">Output In Progress...</h4>
                 </div>
                 <div class="modal-body">
-                    <!-- Progress bar -->
-                    <div id="progress" class="progress progress-striped active">
-                      <div class="progress-bar"  role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
-                        <span class="sr-only">0%</span>
-                      </div>
-                    </div>
-                    <!-- Progress texts -->
-                    <p id="progressPiece"></p>
-                    <p id="progressPage"></p>
-                    <p id="progressDoc"></p>
+					<div class="form-group">
+						<!-- Progress bar -->
+						<div id="progress" class="progress active">
+						  <div class="progress-bar"  role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+							<span class="sr-only">0%</span>
+						  </div>
+						</div>
+						<!-- Progress texts -->
+						<p id="progressPiece"></p>
+						<p id="progressPage"></p>
+						<p id="progressDoc"></p>
+					</div>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Scratch pad for SVG output -->
     <div id="tmpSvg" class="hidden"><svg xmlns='http://www.w3.org/2000/svg' version='1.1'></svg></div>
-    
-    <script>
-        // Add validation for number inputs.
-        $("input[type='number']").change(validateNumber);
-    </script>
 </body>
 </html>

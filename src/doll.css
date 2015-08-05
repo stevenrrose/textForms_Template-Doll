@@ -1,43 +1,41 @@
+.shim, .bbox {
+    fill: none; 
+    stroke: black; 
+    stroke-width: 0.1;
+}
+#pieces {
+	margin-left: 8px;
+	margin-right: 8px;
+}
+.piece {
+	padding: 4px;
+	margin: 0;
+}
 .piece .thumbnail {
+	border-top: none;
     text-align: center;
+	padding: 0;
 }
-.piece .piece-select {
-    position: absolute;
-    margin: 10px;
-}
-.piece .piece-select + label {
+.piece .thumbnail > label {
     width: 100%;
-    background-color: #e0e0e0;
-    _background-image: linear-gradient(to bottom,#e0e0e0 0,#b0b0b0 100%);
-    opacity: 0.5;
+	margin: 0;
 }
-.piece .piece-select:checked + label {
-    background-color: #fff;
-    _background-image: inherit;
+.piece {
+    opacity: 0.25;
+}
+.piece.selected {
     opacity: 1.0;
 }
 .piece  svg {
-    height: 256px;
-    margin-top: 10px;
+    max-height: 500px;
+	margin: 16px 16px 12px 16px;
 }
 #pdf {
     width: 100%;
     height: 100%;
     border: 1px solid black;
 }
-#trapezoidal-label {
-    font-style: italic;
-}
-#pager .pagination {
-    margin: 0;
-}
-#toolbar .btn-group {
-    margin-bottom: 10px;
-}
-#counter {
-    font-size: smaller;
-    font-style:italic;
-}
+
 legend {
     font-size: larger;
     font-weight: bold;
@@ -48,4 +46,73 @@ legend {
 .progress-bar {
     -webkit-transition: none;
     transition: none;
+}
+
+/* Bootstrap CSS ajustment for toolbar. */
+#toolbar {
+  border-color: black;
+  border-left: none;
+  border-right: none;
+  margin-left: 12px;
+  margin-right: 12px;
+  padding: 14px 0;
+}
+#toolbar .control-label {
+    padding-top: 8px;
+}
+
+/* Times sign separator between print layout columns/rows. */
+#layout1:after {
+	display: block;
+	content: "\2716";
+	text-align: center;
+}
+@media (min-width: 768px) {
+	#printLayout > * {
+		float: left;
+	}
+	#layout1 {
+		width: 50%;
+		padding-right: 16px;
+		position: relative;
+	}
+	#layout1:after {
+		position: absolute;
+		width: 2em;
+		right: -1em;
+		top: 50%;
+		-webkit-transform: translateY(-50%);
+		-moz-transform: translateY(-50%);
+		transform: translateY(-50%);
+	}
+	#layout2 {
+		width: 50%;
+		padding-left: 16px;
+	}
+}
+
+/* Spinning icon for infinite scroll. */
+#pieces-end {
+	text-align: center;
+	padding: 4px;
+}
+#pieces-end .icon {
+	font-size: 32px;
+}
+.rotate-ccw {
+    -webkit-animation: rotate-ccw 2s infinite linear;
+    -moz-animation: rotate-ccw 2s infinite linear;
+    animation: rotate-ccw 2s infinite linear;
+}
+@-webkit-keyframes rotate-ccw {
+    from {-webkit-transform: rotate(359deg);}
+	to {-webkit-transform: rotate(0deg);}
+}
+@-moz-keyframes rotate-ccw {
+    from {-moz-transform: rotate(359deg);}
+	to {-moz-transform: rotate(0deg);}
+}
+@keyframes rotate-ccw {
+    from {transform: rotate(359deg);}
+	to {transform: rotate(0deg);}
 }
